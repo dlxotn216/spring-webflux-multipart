@@ -1,0 +1,21 @@
+syntax = "proto3";
+package io.taesu.module.mailsender;
+
+// The greeting service definition.
+service PostEmailRequestHandler {
+  // Sends a greeting
+  rpc postEmail (PostEmailRequest) returns (PostEmailResponse) {}
+}
+
+// The request message containing the user's name.
+message PostEmailRequest {
+  repeated string receivers = 1;
+  string content = 2;
+}
+
+// The response message containing the greetings
+message PostEmailResponse {
+  string sender = 1;
+  repeated string receivers = 2;
+  string sentAt = 3;
+}
