@@ -4,6 +4,7 @@ import io.taesu.module.mailsender.app.utils.response
 import io.taesu.module.mailsender.email.Email
 import io.taesu.module.mailsender.email.api.EmailSendRequest
 import io.taesu.module.mailsender.email.api.EmailSendResponse
+import org.springframework.core.io.FileSystemResource
 import org.springframework.mail.javamail.MimeMessageHelper
 import org.springframework.stereotype.Component
 import reactor.core.publisher.Mono
@@ -85,7 +86,7 @@ class EmailMessageBuilder {
         }.filterNotNull().toTypedArray())
 
         if (request.logoContentId != null && request.blockedLogo != null) {
-            helper.addInline(request.logoContentId, request.blockedLogo!!)
+            helper.addInline(request.logoContentId, FileSystemResource(request.blockedLogo!!))
         }
     }
 }

@@ -5,9 +5,8 @@ import org.springframework.stereotype.Controller
 import org.springframework.web.bind.annotation.ModelAttribute
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.ResponseBody
-import org.springframework.web.reactive.function.server.ServerResponse
 import reactor.core.publisher.Mono
-import java.io.File
+import java.nio.file.Files
 
 
 /**
@@ -34,15 +33,20 @@ class EmailSendRequestController(val service: EmailSendService) {
     @PostMapping("/api/v1/emails")
     fun processModel(@ModelAttribute request: EmailSendRequest): Mono<EmailSendResponse> {
         val fileWait = if (request.logoContentId != null && request.logo != null) {
-            val file = File.createTempFile("logo", "qwer")
-            request.blockedLogo = file
-            request.logo.transferTo(file)
+            Mono.fromSupplier {
+                Files.createTempDirectory("logo")
+            }.map {
+                Files.createFile(it.resolve(request.logoContentId)).toFile()
+            }.map {
+                request.logo.transferTo(it)
+                request.blockedLogo = it
+            }
+
         } else {
             Mono.just("nothing")
         }
 
-        return fileWait.flatMap {
-            service.send(request)
-        }
+        return fileWait
+                .then(service.send(request))
     }
 }
