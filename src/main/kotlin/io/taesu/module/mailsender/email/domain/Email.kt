@@ -13,3 +13,4 @@ class Email(
         val content: String
 )
 
+class Recipient(val emailAddress: String)

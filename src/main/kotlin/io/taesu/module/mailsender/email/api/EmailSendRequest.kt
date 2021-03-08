@@ -2,6 +2,7 @@ package io.taesu.module.mailsender.email.api
 
 import org.springframework.http.codec.multipart.FilePart
 import java.io.File
+import java.nio.file.Path
 
 /**
  * Created by itaesu on 2021/03/06.
@@ -13,14 +14,13 @@ import java.io.File
 class EmailSendRequest(
         val subject: String,
         val content: String,
-        val recipients: List<Recipient> = listOf(Recipient("taesu@crscube.co.kr")),
-        val logo: FilePart? = null,
-        val logoContentId: String? = null
-){
-    var blockedLogo: File? = null
-}
+        val recipients: List<String>,
+        val logo: FilePart,
+        val logoContentId: String,
+        val backgroundLogo: FilePart,
+        val backgroundContentId: String)
 
-class Recipient(val emailAddress: String)
+class InlineFile(val path: Path, val contentId: String)
 
 class EmailSendResponse(
         val sentAt: String,
