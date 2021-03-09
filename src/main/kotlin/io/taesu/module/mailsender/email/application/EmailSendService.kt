@@ -5,6 +5,8 @@ import io.taesu.module.mailsender.email.Email
 import io.taesu.module.mailsender.email.api.EmailSendRequest
 import io.taesu.module.mailsender.email.api.EmailSendResponse
 import io.taesu.module.mailsender.email.api.InlineFile
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.springframework.mail.javamail.MimeMessageHelper
 import org.springframework.stereotype.Component
 import reactor.core.publisher.Mono
@@ -16,7 +18,6 @@ import java.io.ByteArrayOutputStream
 import java.time.LocalDateTime
 import java.util.*
 import javax.mail.Session
-import javax.mail.internet.AddressException
 import javax.mail.internet.InternetAddress
 import javax.mail.internet.MimeMessage
 
@@ -30,7 +31,6 @@ import javax.mail.internet.MimeMessage
 @Component
 class EmailSendService(private val builder: EmailMessageBuilder,
                        private val sesAsyncClient: SesAsyncClient) {
-
     fun send(request: EmailSendRequest, inlineFiles: List<InlineFile>): Mono<EmailSendResponse> {
         val email = Email(
                 sender = "no-reply@crscube.io",
@@ -61,7 +61,6 @@ class EmailSendService(private val builder: EmailMessageBuilder,
 
         return SendRawEmailRequest
                 .builder()
-                .destinations(request.recipients)
                 .rawMessage(rawMessage)
                 .source(sender).build()
     }
@@ -69,17 +68,19 @@ class EmailSendService(private val builder: EmailMessageBuilder,
 
 @Component
 class EmailMessageBuilder {
+    private val log: Logger = LoggerFactory.getLogger(this::class.java)
+
     fun buildMimeMessage(message: MimeMessage, sender: String, request: EmailSendRequest, inlineFiles: List<InlineFile>) {
         with(MimeMessageHelper(message, true, "UTF-8")) {
             setSubject(request.subject)
             setText(request.content, true)
             setFrom(sender)
             setTo(request.recipients.map {
-                try {
-                    return@map InternetAddress(it)
-                } catch (e: AddressException) {
-                    // log.error("address is not valid {}", e.ref, e)
-                    return@map null
+                return@map try {
+                    InternetAddress(it, true)
+                } catch (e: Exception) {
+                    log.warn("Invalid email address [{}] will be ignored.", it)
+                    null
                 }
             }.filterNotNull().toTypedArray())
 
