@@ -32,21 +32,14 @@ import javax.mail.internet.MimeMessage
 class EmailSendService(private val builder: EmailMessageBuilder,
                        private val sesAsyncClient: SesAsyncClient) {
     fun send(request: EmailSendRequest, inlineFiles: List<InlineFile>): Mono<EmailSendResponse> {
-        val email = Email(
-                sender = "no-reply@crscube.io",
-                subject = request.subject,
-                content = request.content)
+        val email = Email(sender = "no-reply@crscube.io", subject = request.subject, content = request.content)
 
         return Mono.fromFuture(this.sesAsyncClient.sendRawEmail(getSendEmailRequest(email.sender, request, inlineFiles)))
-                .map {
-                    EmailSendResponse(
-                            sentAt = LocalDateTime.now().response(),
-                            messageId = it.messageId())
-                }
+                .map { EmailSendResponse(sentAt = LocalDateTime.now().response(), messageId = it.messageId()) }
     }
 
     fun getSendEmailRequest(sender: String, request: EmailSendRequest, inlineFiles: List<InlineFile>): SendRawEmailRequest {
-        val rawMessage = try {
+        val rawMessage: RawMessage = try {
             ByteArrayOutputStream().use {
                 val session = Session.getDefaultInstance(Properties())
                 val message = MimeMessage(session)
@@ -75,14 +68,14 @@ class EmailMessageBuilder {
             setSubject(request.subject)
             setText(request.content, true)
             setFrom(sender)
-            setTo(request.recipients.map {
-                return@map try {
+            setTo(request.recipients.mapNotNull {
+                return@mapNotNull try {
                     InternetAddress(it, true)
                 } catch (e: Exception) {
                     log.warn("Invalid email address [{}] will be ignored.", it)
                     null
                 }
-            }.filterNotNull().toTypedArray())
+            }.toTypedArray())
 
             inlineFiles.forEach { addInline(it.contentId, it.path.toFile()) }
         }

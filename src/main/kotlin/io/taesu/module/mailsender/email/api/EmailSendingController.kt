@@ -23,19 +23,18 @@ class EmailSendingController(val service: EmailSendService) {
     @ResponseBody
     @PostMapping("/api/v1/emails")
     fun processModel(@ModelAttribute request: EmailSendRequest): Mono<EmailSendResponse> {
-        return fromSupplier { Files.createTempDirectory("logo") }
-                .flatMapMany {
-                    val logo = with(request) {
-                        fromSupplier { InlineFile(createFile(it.resolve(logoContentId)), logoContentId) }
-                                .flatMap { logo.transferTo(it.path).thenReturn(it) }
-                    }
-                    val backgroundLogo = with(request) {
-                        fromSupplier { InlineFile(createFile(it.resolve(backgroundContentId)), backgroundContentId) }
-                                .flatMap { backgroundLogo.transferTo(it.path).thenReturn(it) }
-                    }
-                    logo.mergeWith(backgroundLogo)
-                }
-                .collectList()
-                .flatMap { service.send(request, it) }
+        val tempDirectoryMono = fromSupplier { Files.createTempDirectory("logo") }
+        val inlineFilesMono = tempDirectoryMono.flatMapMany {
+            val logo = with(request) {
+                fromSupplier { InlineFile(createFile(it.resolve(logoContentId)), logoContentId) }
+                        .flatMap { logo.transferTo(it.path).thenReturn(it) }
+            }
+            val backgroundLogo = with(request) {
+                fromSupplier { InlineFile(createFile(it.resolve(backgroundContentId)), backgroundContentId) }
+                        .flatMap { backgroundLogo.transferTo(it.path).thenReturn(it) }
+            }
+            logo.mergeWith(backgroundLogo)
+        }.collectList()
+        return inlineFilesMono.flatMap { service.send(request, it) }
     }
 }
