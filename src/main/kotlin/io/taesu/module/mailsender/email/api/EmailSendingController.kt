@@ -1,6 +1,8 @@
 package io.taesu.module.mailsender.email.api
 
+import io.taesu.module.mailsender.app.API_V1
 import io.taesu.module.mailsender.email.application.EmailSendService
+import org.springframework.core.io.ClassPathResource
 import org.springframework.stereotype.Controller
 import org.springframework.web.bind.annotation.ModelAttribute
 import org.springframework.web.bind.annotation.PostMapping
@@ -21,20 +23,36 @@ import java.nio.file.Files.createFile
 @Controller
 class EmailSendingController(val service: EmailSendService) {
     @ResponseBody
-    @PostMapping("/api/v1/emails")
+    @PostMapping("$API_V1/emails")
     fun processModel(@ModelAttribute request: EmailSendRequest): Mono<EmailSendResponse> {
         val tempDirectoryMono = fromSupplier { Files.createTempDirectory("logo") }
         val inlineFilesMono = tempDirectoryMono.flatMapMany {
             val logo = with(request) {
                 fromSupplier { InlineFile(createFile(it.resolve(logoContentId)), logoContentId) }
-                        .flatMap { logo.transferTo(it.path).thenReturn(it) }
+                    .flatMap { getLogoMono(it) }
             }
             val backgroundLogo = with(request) {
                 fromSupplier { InlineFile(createFile(it.resolve(backgroundContentId)), backgroundContentId) }
-                        .flatMap { backgroundLogo.transferTo(it.path).thenReturn(it) }
+                    .flatMap { getBackgroundMono(it) }
             }
             logo.mergeWith(backgroundLogo)
         }.collectList()
         return inlineFilesMono.flatMap { service.send(request, it) }
+    }
+
+    private fun EmailSendRequest.getLogoMono(inlineFile: InlineFile): Mono<InlineFile> {
+        return if (logo == null || logo.filename().isBlank()) {
+            Mono.just(InlineFile(ClassPathResource("img/logo.png").file.toPath(), logoContentId))
+        } else {
+            logo.transferTo(inlineFile.path).thenReturn(inlineFile)
+        }
+    }
+
+    private fun EmailSendRequest.getBackgroundMono(inlineFile: InlineFile): Mono<InlineFile> {
+        return if (background == null || background.filename().isBlank()) {
+            Mono.just(InlineFile(ClassPathResource("img/background.png").file.toPath(), backgroundContentId))
+        } else {
+            background.transferTo(inlineFile.path).thenReturn(inlineFile)
+        }
     }
 }

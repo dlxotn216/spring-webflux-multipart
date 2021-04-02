@@ -12,6 +12,7 @@ import java.time.format.DateTimeFormatter
  * @version TBD
  * @since TBD
  */
-fun LocalDateTime.yyyyMMddhhmmss() = this.format(DateTimeFormatter.ofPattern("yyyyMMddhhmmss"))
-fun LocalDateTime.response() =
+fun LocalDateTime?.response() =
+    this?.let {
         ZonedDateTime.of(this, ZoneId.of("UTC")).format(DateTimeFormatter.ofPattern("yyyy-MM-dd hh:mm:ss z"))
+    } ?: ""

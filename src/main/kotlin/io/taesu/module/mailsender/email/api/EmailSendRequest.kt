@@ -1,7 +1,6 @@
 package io.taesu.module.mailsender.email.api
 
 import org.springframework.http.codec.multipart.FilePart
-import java.io.File
 import java.nio.file.Path
 
 /**
@@ -12,17 +11,27 @@ import java.nio.file.Path
  * @since TBD
  */
 class EmailSendRequest(
-        val subject: String,
-        val content: String,
-        val recipients: List<String>,
-        val logo: FilePart,
-        val logoContentId: String,
-        val backgroundLogo: FilePart,
-        val backgroundContentId: String)
+    val subject: String,
+    val content: String,
+    val to: Set<String>,
+    cc: Set<String>?,
+    bcc: Set<String>?,
+    val logo: FilePart?,
+    logoContentId: String?,
+    val background: FilePart?,
+    backgroundContentId: String?) {
+
+    val cc = cc ?: emptySet()
+    val bcc = bcc ?: emptySet()
+
+    val logoContentId: String = logoContentId ?: "logo.png"
+    val backgroundContentId: String = backgroundContentId ?: "background.png"
+}
 
 class InlineFile(val path: Path, val contentId: String)
 
 class EmailSendResponse(
-        val sentAt: String,
-        val messageId: String
+    val emailKey: Long,
+    val sentAt: String,
+    val messageId: String
 )

@@ -2,14 +2,18 @@ package io.taesu.module.mailsender.email.application
 
 import io.taesu.module.mailsender.app.utils.response
 import io.taesu.module.mailsender.email.Email
+import io.taesu.module.mailsender.email.EmailRepository
 import io.taesu.module.mailsender.email.api.EmailSendRequest
 import io.taesu.module.mailsender.email.api.EmailSendResponse
 import io.taesu.module.mailsender.email.api.InlineFile
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import org.springframework.boot.context.properties.ConfigurationProperties
+import org.springframework.boot.context.properties.ConstructorBinding
 import org.springframework.mail.javamail.MimeMessageHelper
 import org.springframework.stereotype.Component
 import reactor.core.publisher.Mono
+import reactor.core.publisher.Mono.fromFuture
 import software.amazon.awssdk.core.SdkBytes
 import software.amazon.awssdk.services.ses.SesAsyncClient
 import software.amazon.awssdk.services.ses.model.RawMessage
@@ -29,16 +33,25 @@ import javax.mail.internet.MimeMessage
  * @since TBD
  */
 @Component
-class EmailSendService(private val builder: EmailMessageBuilder,
+class EmailSendService(private val config: EmailSendConfiguration,
+                       private val builder: EmailMessageBuilder,
+                       private val emailRepository: EmailRepository,
                        private val sesAsyncClient: SesAsyncClient) {
     fun send(request: EmailSendRequest, inlineFiles: List<InlineFile>): Mono<EmailSendResponse> {
-        val email = Email(sender = "no-reply@crscube.io", subject = request.subject, content = request.content)
-
-        return Mono.fromFuture(this.sesAsyncClient.sendRawEmail(getSendEmailRequest(email.sender, request, inlineFiles)))
-                .map { EmailSendResponse(sentAt = LocalDateTime.now().response(), messageId = it.messageId()) }
+        return fromFuture(this.sesAsyncClient.sendRawEmail(getSendEmailRequest(config.sender, request, inlineFiles)))
+            .flatMap {
+                emailRepository.save(Email(sender = config.sender,
+                                           subject = request.subject,
+                                           content = request.content,
+                                           messageId = it.messageId(),
+                                           sentAt = LocalDateTime.now()))
+            }
+            .map { EmailSendResponse(emailKey = it.key, sentAt = it.sentAt.response(), messageId = it.messageId) }
     }
 
-    fun getSendEmailRequest(sender: String, request: EmailSendRequest, inlineFiles: List<InlineFile>): SendRawEmailRequest {
+    fun getSendEmailRequest(sender: String,
+                            request: EmailSendRequest,
+                            inlineFiles: List<InlineFile>): SendRawEmailRequest {
         val rawMessage: RawMessage = try {
             ByteArrayOutputStream().use {
                 val session = Session.getDefaultInstance(Properties())
@@ -53,9 +66,9 @@ class EmailSendService(private val builder: EmailMessageBuilder,
         }
 
         return SendRawEmailRequest
-                .builder()
-                .rawMessage(rawMessage)
-                .source(sender).build()
+            .builder()
+            .rawMessage(rawMessage)
+            .source(sender).build()
     }
 }
 
@@ -63,21 +76,32 @@ class EmailSendService(private val builder: EmailMessageBuilder,
 class EmailMessageBuilder {
     private val log: Logger = LoggerFactory.getLogger(this::class.java)
 
-    fun buildMimeMessage(message: MimeMessage, sender: String, request: EmailSendRequest, inlineFiles: List<InlineFile>) {
+    fun buildMimeMessage(message: MimeMessage,
+                         sender: String,
+                         request: EmailSendRequest,
+                         inlineFiles: List<InlineFile>) {
         with(MimeMessageHelper(message, true, "UTF-8")) {
             setSubject(request.subject)
             setText(request.content, true)
             setFrom(sender)
-            setTo(request.recipients.mapNotNull {
-                return@mapNotNull try {
-                    InternetAddress(it, true)
-                } catch (e: Exception) {
-                    log.warn("Invalid email address [{}] will be ignored.", it)
-                    null
-                }
-            }.toTypedArray())
+            setTo(request.to.mapToAddressArray(log))
+            setCc(request.cc.mapToAddressArray(log))
+            setBcc(request.bcc.mapToAddressArray(log))
 
             inlineFiles.forEach { addInline(it.contentId, it.path.toFile()) }
         }
     }
 }
+
+fun Set<String>.mapToAddressArray(log: Logger) = this.mapNotNull {
+    return@mapNotNull try {
+        InternetAddress(it, true)
+    } catch (e: Exception) {
+        log.warn("Invalid email address $it will be ignored.")
+        null
+    }
+}.toTypedArray()
+
+@ConfigurationProperties("app.config")
+@ConstructorBinding
+class EmailSendConfiguration(val sender: String)
