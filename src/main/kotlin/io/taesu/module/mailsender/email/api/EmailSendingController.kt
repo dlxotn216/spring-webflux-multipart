@@ -11,6 +11,7 @@ import reactor.core.publisher.Mono
 import reactor.core.publisher.Mono.fromSupplier
 import java.nio.file.Files
 import java.nio.file.Files.createFile
+import java.util.*
 
 
 /**
@@ -24,7 +25,8 @@ import java.nio.file.Files.createFile
 class EmailSendingController(val service: EmailSendService) {
     @ResponseBody
     @PostMapping("$API_V1/emails")
-    fun processModel(@ModelAttribute request: EmailSendRequest): Mono<EmailSendResponse> {
+    fun processModel(@ModelAttribute request: EmailSendRequest,
+                     locale: Locale): Mono<EmailSendResponse> {
         val tempDirectoryMono = fromSupplier { Files.createTempDirectory("logo") }
         val inlineFilesMono = tempDirectoryMono.flatMapMany {
             val logo = with(request) {
@@ -49,7 +51,7 @@ class EmailSendingController(val service: EmailSendService) {
     }
 
     private fun EmailSendRequest.getBackgroundMono(inlineFile: InlineFile): Mono<InlineFile> {
-        return if (background == null || background.filename().isBlank()) {
+        return if (background == null || background.filename().isNullOrBlank()) {
             Mono.just(InlineFile(ClassPathResource("img/background.png").file.toPath(), backgroundContentId))
         } else {
             background.transferTo(inlineFile.path).thenReturn(inlineFile)

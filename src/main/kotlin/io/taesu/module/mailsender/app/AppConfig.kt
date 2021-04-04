@@ -1,6 +1,9 @@
 package io.taesu.module.mailsender.app
 
+import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.web.server.i18n.AcceptHeaderLocaleContextResolver
+import org.springframework.web.server.i18n.LocaleContextResolver
 
 
 /**
@@ -12,6 +15,7 @@ import org.springframework.context.annotation.Configuration
  */
 @Configuration
 class AppConfig {
-
+    @Bean
+    fun localeContextResolver(): LocaleContextResolver = AcceptHeaderLocaleContextResolver()
 }
 

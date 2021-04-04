@@ -14,7 +14,7 @@ logging:
   level:
     org.springframework: INFO
     org.springframework.transaction: DEBUG
-    org.springframework.data.r2dbc: DEBUG
+    org.springframework.r2dbc: DEBUG
 
 app:
   config:
