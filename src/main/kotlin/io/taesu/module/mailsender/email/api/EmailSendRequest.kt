@@ -7,8 +7,8 @@ import java.nio.file.Path
  * Created by itaesu on 2021/03/06.
  *
  * @author Lee Tae Su
- * @version TBD
- * @since TBD
+ * @version 0.1
+ * @since 0.1
  */
 class EmailSendRequest(
     val subject: String,

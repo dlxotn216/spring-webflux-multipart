@@ -18,8 +18,8 @@ import java.util.*
  * Created by itaesu on 2021/03/06.
  *
  * @author Lee Tae Su
- * @version TBD
- * @since TBD
+ * @version 0.1
+ * @since 0.1
  */
 @Controller
 class EmailSendingController(val service: EmailSendService) {

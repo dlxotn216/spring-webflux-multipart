@@ -29,8 +29,8 @@ import javax.mail.internet.MimeMessage
  * Created by itaesu on 2021/03/06.
  *
  * @author Lee Tae Su
- * @version TBD
- * @since TBD
+ * @version 0.1
+ * @since 0.1
  */
 @Component
 class EmailSendService(private val config: EmailSendConfiguration,
@@ -74,7 +74,9 @@ class EmailSendService(private val config: EmailSendConfiguration,
 
 @Component
 class EmailMessageBuilder {
-    private val log: Logger = LoggerFactory.getLogger(this::class.java)
+    companion object {
+        private val log: Logger = LoggerFactory.getLogger(this::class.java)
+    }
 
     fun buildMimeMessage(message: MimeMessage,
                          sender: String,

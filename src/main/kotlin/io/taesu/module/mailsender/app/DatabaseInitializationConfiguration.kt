@@ -11,8 +11,8 @@ import java.nio.charset.Charset
  * Created by itaesu on 2021/04/02.
  *
  * @author Lee Tae Su
- * @version TBD
- * @since TBD
+ * @version 0.1
+ * @since 0.1
  */
 @Configuration(proxyBeanMethods = false)
 class DatabaseInitializationConfiguration {
